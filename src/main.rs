@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
-use std::{cmp, env, fmt, io, process};
+use std::{cmp, env, fmt, process};
+
+//suppress all stored data with iterator manipulation
 
 struct Solver {
     ops: Vec<&'static str>,
@@ -8,6 +10,11 @@ struct Solver {
 struct Stacks {
     a: VecDeque<i32>,
     b: VecDeque<i32>,
+}
+
+enum Direction {
+    Ab,
+    Ba,
 }
 
 impl fmt::Display for Stacks {
@@ -56,7 +63,7 @@ impl Stacks {
         Ok(stacks)
     }
 
-    pub fn exec(&mut self, op: &str) -> Result<(), &'static str> {
+    pub fn exec(&mut self, op: &str) {
         match op {
             "sa" => self.a.swap(0, 1),
             "sb" => self.b.swap(0, 1),
@@ -78,9 +85,8 @@ impl Stacks {
             }
             "pa" => self.b.push_front(self.a.pop_front().unwrap()),
             "pb" => self.a.push_front(self.b.pop_front().unwrap()),
-            _ => return Err("unknown operation"),
-        }
-        Ok(())
+            _ => (),
+        };
     }
 
     fn check_dup(stack: &VecDeque<i32>) -> Result<(), &'static str> {
@@ -108,7 +114,15 @@ impl Solver {
     }
 
     pub fn solve(&mut self, stacks: &mut Stacks) {
-        self.sort_til_4(stacks);
+        //        println!("{}", stacks);
+        self.big_sort(stacks, Direction::Ab, 4);
+        //       println!("{}", stacks);
+        self.sort_upto_4(stacks);
+        //      println!("{}", stacks);
+        self.big_sort(stacks, Direction::Ba, 0);
+        //     println!("{}", stacks);
+        self.final_rot(stacks);
+        //        println!("{}", stacks);
     }
 
     fn get_order(stack: &VecDeque<i32>) -> Vec<usize> {
@@ -117,50 +131,212 @@ impl Solver {
         let mut i = 0;
 
         while copy.len() != 0 {
-            let (idx, _) =
-                copy.swap_remove(copy.iter().enumerate().min_by_key(|x| x.1 .1).unwrap().0);
+            let (idx, _) = copy.swap_remove(
+                copy.iter()
+                    .enumerate()
+                    .min_by_key(|(_, (_, k))| k)
+                    .unwrap()
+                    .0,
+            );
             result[idx] = i;
             i += 1;
         }
         result
     }
 
-    fn sort_til_4(&mut self, stacks: &mut Stacks) {
-        self.ops
-            .append(&mut match Solver::get_order(&stacks.a)[..] {
-                [1, 0] => vec!["sa"],
-                [0, 2, 1] => vec!["sa", "ra"],
-                [1, 0, 2] => vec!["sa"],
-                [1, 2, 0] => vec!["rra"],
-                [2, 0, 1] => vec!["ra"],
-                [2, 1, 0] => vec!["sa", "rra"],
-                [0, 1, 3, 2] => vec!["rra", "rra", "sa", "ra", "ra"],
-                [0, 2, 1, 3] => vec!["ra", "sa", "rra"],
-                [0, 2, 3, 1] => vec!["rra", "sa"],
-                [0, 3, 1, 2] => vec!["sa", "ra"],
-                [0, 3, 2, 1] => vec!["ra", "sa", "rra", "rra", "sa"],
-                [1, 0, 2, 3] => vec!["sa"],
-                [1, 0, 3, 2] => vec!["sa", "ra", "ra", "sa", "rra", "rra"],
-                [1, 2, 0, 3] => vec!["rra", "rra", "sa", "ra"],
-                [1, 2, 3, 0] => vec!["rra"],
-                [1, 3, 0, 2] => vec!["rra", "sa", "rra"],
-                [1, 3, 2, 0] => vec!["ra", "sa", "rra", "rra"],
-                [2, 0, 1, 3] => vec!["rra", "sa", "ra", "ra"],
-                [2, 0, 3, 1] => vec!["ra", "sa", "ra"],
-                [2, 1, 0, 3] => vec!["sa", "ra", "ra", "sa", "ra"],
-                [2, 1, 3, 0] => vec!["sa", "rra"],
-                [2, 3, 0, 1] => vec!["ra", "ra"],
-                [2, 3, 1, 0] => vec!["ra", "ra", "sa"],
-                [3, 0, 1, 2] => vec!["ra"],
-                [3, 0, 2, 1] => vec!["rra", "sa", "ra", "sa"],
-                [3, 1, 0, 2] => vec!["ra", "sa"],
-                [3, 1, 2, 0] => vec!["rra", "sa", "ra"],
-                [3, 2, 0, 1] => vec!["sa", "rra", "rra"],
-                [3, 2, 1, 0] => vec!["sa", "rra", "rra", "sa"],
-                _ => vec![],
-            });
-        for op in &self.ops {
+    fn sort_upto_4(&mut self, stacks: &mut Stacks) {
+        let mut ops = match Solver::get_order(&stacks.a)[..] {
+            [1, 0] => vec!["sa"],
+            [0, 2, 1] => vec!["sa", "ra"],
+            [1, 0, 2] => vec!["sa"],
+            [1, 2, 0] => vec!["rra"],
+            [2, 0, 1] => vec!["ra"],
+            [2, 1, 0] => vec!["sa", "rra"],
+            [0, 1, 3, 2] => vec!["rra", "rra", "sa", "ra", "ra"],
+            [0, 2, 1, 3] => vec!["ra", "sa", "rra"],
+            [0, 2, 3, 1] => vec!["rra", "sa"],
+            [0, 3, 1, 2] => vec!["sa", "ra"],
+            [0, 3, 2, 1] => vec!["ra", "sa", "rra", "rra", "sa"],
+            [1, 0, 2, 3] => vec!["sa"],
+            [1, 0, 3, 2] => vec!["sa", "ra", "ra", "sa", "rra", "rra"],
+            [1, 2, 0, 3] => vec!["rra", "rra", "sa", "ra"],
+            [1, 2, 3, 0] => vec!["rra"],
+            [1, 3, 0, 2] => vec!["rra", "sa", "rra"],
+            [1, 3, 2, 0] => vec!["ra", "sa", "rra", "rra"],
+            [2, 0, 1, 3] => vec!["rra", "sa", "ra", "ra"],
+            [2, 0, 3, 1] => vec!["ra", "sa", "ra"],
+            [2, 1, 0, 3] => vec!["sa", "ra", "ra", "sa", "ra"],
+            [2, 1, 3, 0] => vec!["sa", "rra"],
+            [2, 3, 0, 1] => vec!["ra", "ra"],
+            [2, 3, 1, 0] => vec!["ra", "ra", "sa"],
+            [3, 0, 1, 2] => vec!["ra"],
+            [3, 0, 2, 1] => vec!["rra", "sa", "ra", "sa"],
+            [3, 1, 0, 2] => vec!["ra", "sa"],
+            [3, 1, 2, 0] => vec!["rra", "sa", "ra"],
+            [3, 2, 0, 1] => vec!["sa", "rra", "rra"],
+            [3, 2, 1, 0] => vec!["sa", "rra", "rra", "sa"],
+            _ => vec![],
+        };
+        for op in &ops {
             stacks.exec(op);
+        }
+        self.ops.append(&mut ops);
+    }
+
+    fn push_exec(&mut self, stacks: &mut Stacks, op: &'static str) {
+        self.ops.push(op);
+        stacks.exec(op);
+    }
+
+    fn get_places(stacks: &Stacks, dir: &Direction) -> Vec<usize> {
+        match dir {
+            Direction::Ab => {
+                let (src, dst) = (&stacks.a, &stacks.b);
+                let (def, _) = dst
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|(_, &k)| k)
+                    .unwrap_or((0, &0));
+                src.iter()
+                    .map(|x| {
+                        match dst
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, v)| v < &x)
+                            .max_by_key(|(_, &k)| k)
+                        {
+                            Some((i, _)) => i,
+                            None => def,
+                        }
+                    })
+                    .collect()
+            }
+            Direction::Ba => {
+                let (src, dst) = (&stacks.b, &stacks.a);
+                let (def, _) = dst
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, &k)| k)
+                    .unwrap_or((0, &0));
+                src.iter()
+                    .map(|x| {
+                        match dst
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, v)| v > &x)
+                            .min_by_key(|(_, &k)| k)
+                        {
+                            Some((i, _)) => i,
+                            None => def,
+                        }
+                    })
+                    .collect()
+            }
+        }
+    }
+
+    fn op_conv(ops: [usize; 6], dir: &Direction) -> Vec<&'static str> {
+        let [r1, rr1, r2, rr2, rr, rrr] = ops;
+        let mut result = Vec::with_capacity(ops.iter().sum::<usize>() + 1);
+
+        result.append(&mut vec!["rr"; rr]);
+        result.append(&mut vec!["rrr"; rrr]);
+        match dir {
+            Direction::Ab => {
+                result.append(&mut vec!["ra"; r1]);
+                result.append(&mut vec!["rra"; rr1]);
+                result.append(&mut vec!["rb"; r2]);
+                result.append(&mut vec!["rrb"; rr2]);
+                result.push("pa");
+            }
+            Direction::Ba => {
+                result.append(&mut vec!["rb"; r1]);
+                result.append(&mut vec!["rrb"; rr1]);
+                result.append(&mut vec!["ra"; r2]);
+                result.append(&mut vec!["rra"; rr2]);
+                result.push("pb");
+            }
+        };
+        result
+    }
+
+    fn get_best_ops(stacks: &Stacks, dir: &Direction) -> Vec<Vec<&'static str>> {
+        let (src, dst) = match &dir {
+            Direction::Ab => (&stacks.a, &stacks.b),
+            Direction::Ba => (&stacks.b, &stacks.a),
+        };
+        let places = Solver::get_places(stacks, dir);
+        let best_ops = src
+            .iter()
+            .zip(places.iter())
+            .enumerate()
+            .map(|(i, (_, j))| (i, j))
+            .map(|(i, j)| (i, src.len() - i, j, dst.len() - j))
+            .map(|(ra, rra, rb, rrb)| {
+                let mut op_count = [
+                    [0; 6],
+                    if ra < *rb {
+                        [0, 0, *rb - ra, 0, ra, 0]
+                    } else {
+                        [ra - *rb, 0, 0, 0, *rb, 0]
+                    },
+                    if rra < rrb {
+                        [0, 0, 0, rrb - rra, 0, rra]
+                    } else {
+                        [0, rra - rrb, 0, 0, rrb, 0]
+                    },
+                ];
+                if ra < rra {
+                    op_count[0][0] = ra
+                } else {
+                    op_count[0][1] = rra
+                };
+                if *rb < rrb {
+                    op_count[0][2] = *rb
+                } else {
+                    op_count[0][3] = rrb
+                };
+                op_count
+                    .iter()
+                    .min_by_key(|k| k.iter().sum::<usize>())
+                    .unwrap()
+                    .clone()
+            });
+        let mut result = Vec::with_capacity(src.len());
+        for ops in best_ops {
+            result.push(Solver::op_conv(ops, &dir));
+        }
+        result
+    }
+
+    fn big_sort(&mut self, stacks: &mut Stacks, dir: Direction, until: usize) {
+        while match &dir {
+            Direction::Ab => &stacks.a,
+            Direction::Ba => &stacks.b,
+        }
+        .len()
+            > until
+        {
+            for op in Solver::get_best_ops(stacks, &dir)
+                .iter()
+                .min_by_key(|ops| ops.len())
+                .unwrap()
+            {
+                self.push_exec(stacks, op);
+            }
+        }
+    }
+
+    fn final_rot(&mut self, stacks: &mut Stacks) {
+        if let Some((min, _)) = stacks.a.iter().enumerate().min_by_key(|(_, k)| *k) {
+            let rots = if min < stacks.a.len() - min {
+                vec!["ra"; min]
+            } else {
+                vec!["rra"; stacks.a.len() - min]
+            };
+            for op in rots {
+                self.push_exec(stacks, op);
+            }
         }
     }
 }
@@ -170,13 +346,6 @@ fn error(msg: &str) {
     process::exit(1);
 }
 
-fn trim_ret(buff: &str) -> &str {
-    if buff.ends_with("\n") {
-        return &buff[..buff.len() - 1];
-    }
-    buff
-}
-
 fn main() {
     match Stacks::new() {
         Ok(mut stacks) => {
@@ -184,17 +353,6 @@ fn main() {
 
             solver.solve(&mut stacks);
             println!("{}", solver);
-            /*
-            let mut buff = String::new();
-            loop {
-                println!("{}", &stacks);
-                io::stdin().read_line(&mut buff).unwrap();
-                if let Err(msg) = stacks.exec(trim_ret(&buff)) {
-                    error(msg);
-                }
-                buff.clear();
-            }
-            */
         }
         Err(msg) => error(msg),
     }
