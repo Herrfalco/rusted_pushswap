@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 use std::{env, fmt, process};
 
+#[cfg(test)]
+mod test_mod;
+
 struct Solver {
     ops: Vec<&'static str>,
 }
