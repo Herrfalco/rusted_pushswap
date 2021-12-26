@@ -1,8 +1,6 @@
 use std::collections::VecDeque;
 use std::{env, fmt, process};
 
-//suppress all stored data with iterator manipulation
-
 struct Solver {
     ops: Vec<&'static str>,
 }
@@ -38,16 +36,17 @@ impl Stacks {
     pub fn new() -> Result<Stacks, &'static str> {
         let stack_cap = env::args().skip(1).len();
 
-        let mut stacks = Stacks {
-            a: VecDeque::with_capacity(stack_cap),
+        let stacks = Stacks {
+            a: match env::args()
+                .skip(1)
+                .map(|arg| i32::from_str_radix(&arg, 10))
+                .collect::<Result<VecDeque<i32>, _>>()
+            {
+                Ok(stack) => stack,
+                Err(_) => return Err("wrong parameter"),
+            },
             b: VecDeque::with_capacity(stack_cap),
         };
-        for arg in env::args().skip(1) {
-            match i32::from_str_radix(&arg, 10) {
-                Ok(v) => stacks.a.push_back(v),
-                Err(_) => return Err("wrong parameter"),
-            }
-        }
         Stacks::check_dup(&stacks.a)?;
         Ok(stacks)
     }
@@ -96,15 +95,10 @@ impl Solver {
     }
 
     pub fn solve(&mut self, stacks: &mut Stacks) {
-        //        println!("{}", stacks);
         self.big_sort(stacks, Direction::Ab, 4);
-        // println!("{}", stacks);
         self.sort_upto_4(stacks);
-        //      println!("{}", stacks);
         self.big_sort(stacks, Direction::Ba, 0);
-        //     println!("{}", stacks);
         self.final_rot(stacks);
-        //    println!("{}", stacks);
     }
 
     fn get_order(stack: &VecDeque<i32>) -> Vec<usize> {
