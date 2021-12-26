@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::{cmp, env, fmt, process};
+use std::{env, fmt, process};
 
 //suppress all stored data with iterator manipulation
 
@@ -19,19 +19,8 @@ enum Direction {
 
 impl fmt::Display for Stacks {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(
-            f,
-            "    A    |    B    \n\
-             -------------------"
-        )?;
-        for i in 0..cmp::max(self.a.len(), self.b.len()) {
-            writeln!(
-                f,
-                "{:^9}|{:^9}",
-                Stacks::opt_to_str(self.a.get(i)),
-                Stacks::opt_to_str(self.b.get(i)),
-            )?;
-        }
+        writeln!(f, "A: {:?}", self.a)?;
+        writeln!(f, "B: {:?}", self.b)?;
         Ok(())
     }
 }
@@ -83,8 +72,8 @@ impl Stacks {
                 self.a.rotate_right(1);
                 self.b.rotate_right(1);
             }
-            "pa" => self.b.push_front(self.a.pop_front().unwrap()),
-            "pb" => self.a.push_front(self.b.pop_front().unwrap()),
+            "pa" => self.a.push_front(self.b.pop_front().unwrap()),
+            "pb" => self.b.push_front(self.a.pop_front().unwrap()),
             _ => (),
         };
     }
@@ -99,13 +88,6 @@ impl Stacks {
         }
         Ok(())
     }
-
-    fn opt_to_str(o: Option<&i32>) -> String {
-        match o {
-            Some(v) => v.to_string(),
-            None => "".to_string(),
-        }
-    }
 }
 
 impl Solver {
@@ -116,13 +98,13 @@ impl Solver {
     pub fn solve(&mut self, stacks: &mut Stacks) {
         //        println!("{}", stacks);
         self.big_sort(stacks, Direction::Ab, 4);
-        //       println!("{}", stacks);
+        // println!("{}", stacks);
         self.sort_upto_4(stacks);
         //      println!("{}", stacks);
         self.big_sort(stacks, Direction::Ba, 0);
         //     println!("{}", stacks);
         self.final_rot(stacks);
-        //        println!("{}", stacks);
+        //    println!("{}", stacks);
     }
 
     fn get_order(stack: &VecDeque<i32>) -> Vec<usize> {
@@ -247,14 +229,14 @@ impl Solver {
                 result.append(&mut vec!["rra"; rr1]);
                 result.append(&mut vec!["rb"; r2]);
                 result.append(&mut vec!["rrb"; rr2]);
-                result.push("pa");
+                result.push("pb");
             }
             Direction::Ba => {
                 result.append(&mut vec!["rb"; r1]);
                 result.append(&mut vec!["rrb"; rr1]);
                 result.append(&mut vec!["ra"; r2]);
                 result.append(&mut vec!["rra"; rr2]);
-                result.push("pb");
+                result.push("pa");
             }
         };
         result
@@ -283,7 +265,7 @@ impl Solver {
                     if rra < rrb {
                         [0, 0, 0, rrb - rra, 0, rra]
                     } else {
-                        [0, rra - rrb, 0, 0, rrb, 0]
+                        [0, rra - rrb, 0, 0, 0, rrb]
                     },
                 ];
                 if ra < rra {
@@ -352,7 +334,7 @@ fn main() {
             let mut solver = Solver::new();
 
             solver.solve(&mut stacks);
-            println!("{}", solver);
+            print!("{}", solver);
         }
         Err(msg) => error(msg),
     }
