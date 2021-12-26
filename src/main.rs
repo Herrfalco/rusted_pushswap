@@ -249,8 +249,7 @@ impl Solver {
             .iter()
             .zip(places.iter())
             .enumerate()
-            .map(|(i, (_, j))| (i, j))
-            .map(|(i, j)| (i, src.len() - i, j, dst.len() - j))
+            .map(|(i, (_, j))| (i, src.len() - i, j, dst.len() - j))
             .map(|(ra, rra, rb, rrb)| {
                 let mut op_count = [
                     [0; 6],
