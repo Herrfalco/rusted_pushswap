@@ -4,8 +4,11 @@ use std::{env, fmt, process};
 #[cfg(test)]
 mod test_mod;
 
+pub static BACK_TRACK: usize = 5;
+
 struct Solver {
     ops: Vec<&'static str>,
+    gen: usize,
 }
 
 struct Stacks {
@@ -80,6 +83,23 @@ impl Stacks {
         };
     }
 
+    pub fn unexec(&mut self, op: &str) {
+        match op {
+            "sa" => self.exec("sa"),
+            "sb" => self.exec("sb"),
+            "ra" => self.exec("rra"),
+            "rb" => self.exec("rrb"),
+            "rra" => self.exec("ra"),
+            "rrb" => self.exec("rb"),
+            "ss" => self.exec("ss"),
+            "rr" => self.exec("rrr"),
+            "rrr" => self.exec("rr"),
+            "pa" => self.exec("pb"),
+            "pb" => self.exec("pa"),
+            _ => (),
+        };
+    }
+
     fn check_dup(stack: &VecDeque<i32>) -> Result<(), &'static str> {
         let mut copy: Vec<&i32> = stack.iter().collect();
 
@@ -93,14 +113,17 @@ impl Stacks {
 }
 
 impl Solver {
-    pub fn new() -> Solver {
-        Solver { ops: Vec::new() }
+    pub fn new(gen: usize) -> Solver {
+        Solver {
+            ops: Vec::new(),
+            gen,
+        }
     }
 
     pub fn solve(&mut self, stacks: &mut Stacks) {
-        self.big_sort(stacks, Direction::Ab, 5);
+        self.big_sort(stacks, &Direction::Ab, 5);
         self.sort_upto_5(stacks);
-        self.big_sort(stacks, Direction::Ba, 0);
+        self.big_sort(stacks, &Direction::Ba, 0);
         self.final_rot(stacks);
     }
 
@@ -289,21 +312,48 @@ impl Solver {
         result
     }
 
-    fn big_sort(&mut self, stacks: &mut Stacks, dir: Direction, until: usize) {
-        while match &dir {
+    fn big_sort(&mut self, stacks: &mut Stacks, dir: &Direction, until: usize) {
+        let mut solver = Solver::new(self.gen);
+
+        solver.rec_sort(stacks, dir, until);
+        for op in &solver.ops {
+            stacks.exec(op);
+        }
+        self.ops.append(&mut solver.ops);
+    }
+
+    fn rec_sort(&mut self, stacks: &mut Stacks, dir: &Direction, until: usize) {
+        if match &dir {
             Direction::Ab => &stacks.a,
             Direction::Ba => &stacks.b,
         }
         .len()
             > until
         {
-            for op in Solver::get_best_ops(stacks, &dir)
-                .iter()
-                .min_by_key(|ops| ops.len())
-                .unwrap()
-            {
-                self.push_exec(stacks, op);
+            let best_ops = Solver::get_best_ops(stacks, &dir);
+            let min_ops = best_ops.iter().min_by_key(|ops| ops.len()).unwrap().len();
+            let mut solution: Option<Solver> = None;
+
+            for choice in best_ops.iter().filter(|ops| ops.len() == min_ops) {
+                let mut new_solver = Solver::new(self.gen.saturating_sub(1));
+
+                for op in choice {
+                    new_solver.push_exec(stacks, op);
+                }
+                new_solver.rec_sort(stacks, dir, until);
+                for op in choice.iter().rev() {
+                    stacks.unexec(op);
+                }
+                solution = match &solution {
+                    Some(sol) if sol.ops.len() > new_solver.ops.len() => Some(new_solver),
+                    None => Some(new_solver),
+                    _ => solution,
+                };
+                if self.gen == 0 {
+                    break;
+                }
             }
+            self.ops.append(&mut solution.unwrap().ops);
         }
     }
 
@@ -329,7 +379,7 @@ fn error(msg: &str) {
 fn main() {
     match Stacks::new() {
         Ok(mut stacks) => {
-            let mut solver = Solver::new();
+            let mut solver = Solver::new(BACK_TRACK);
 
             solver.solve(&mut stacks);
             print!("{}", solver);

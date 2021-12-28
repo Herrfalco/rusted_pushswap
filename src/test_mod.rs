@@ -8,7 +8,7 @@ fn rand_nb_utils(size: i32, space: i32) {
         a: VecDeque::from_iter(values),
         b: VecDeque::new(),
     };
-    let mut solver = Solver::new();
+    let mut solver = Solver::new(BACK_TRACK);
 
     solver.solve(&mut stacks);
     assert_eq!(
