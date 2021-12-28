@@ -98,8 +98,8 @@ impl Solver {
     }
 
     pub fn solve(&mut self, stacks: &mut Stacks) {
-        self.big_sort(stacks, Direction::Ab, 4);
-        self.sort_upto_4(stacks);
+        self.big_sort(stacks, Direction::Ab, 5);
+        self.sort_upto_5(stacks);
         self.big_sort(stacks, Direction::Ba, 0);
         self.final_rot(stacks);
     }
@@ -120,18 +120,43 @@ impl Solver {
             result[idx] = i;
             i += 1;
         }
+        if result.len() > 0 {
+            let len = result.len();
+            let delta = len - result[0];
+
+            for val in &mut result {
+                *val = (*val + delta) % len;
+            }
+        }
+        eprintln!("{:?}", result);
         result
     }
 
-    fn sort_upto_4(&mut self, stacks: &mut Stacks) {
+    fn sort_upto_5(&mut self, stacks: &mut Stacks) {
         let mut ops = match Solver::get_order(&stacks.a)[..] {
-            [0, 2, 1] | [1, 0, 2] | [2, 1, 0] => vec!["sa"],
-            [0, 3, 1, 2] | [1, 0, 2, 3] | [2, 1, 3, 0] | [3, 2, 0, 1] => vec!["sa"],
-            [0, 2, 3, 1] | [1, 3, 0, 2] | [2, 0, 1, 3] | [3, 1, 2, 0] => vec!["rra", "sa"],
-            [0, 2, 1, 3] | [1, 3, 2, 0] | [2, 0, 3, 1] | [3, 1, 0, 2] => vec!["ra", "sa"],
-            [0, 1, 3, 2] | [1, 2, 0, 3] | [2, 3, 1, 0] | [3, 0, 2, 1] => vec!["ra", "ra", "sa"],
-            [1, 0, 3, 2] | [3, 2, 1, 0] => vec!["sa", "rra", "rra", "sa"],
-            [0, 3, 2, 1] | [2, 1, 0, 3] => vec!["sa", "ra", "ra", "sa", "ra"],
+            [0, 1, 2, 4, 3] | [0, 1, 3, 2] => vec!["rra", "rra", "sa"],
+            [0, 1, 3, 2, 4] => vec!["ra", "ra", "sa"],
+            [0, 1, 3, 4, 2] => vec!["rra", "sa", "ra", "sa"],
+            [0, 1, 4, 2, 3] => vec!["ra", "sa", "rra", "sa"],
+            [0, 1, 4, 3, 2] => vec!["rra", "rra", "sa", "rra", "sa", "ra", "sa"],
+            [0, 2, 1, 3, 4] | [0, 2, 1, 3] => vec!["ra", "sa"],
+            [0, 2, 1, 4, 3] => vec!["ra", "sa", "ra", "ra", "sa"],
+            [0, 2, 3, 1, 4] => vec!["ra", "ra", "sa", "rra", "sa"],
+            [0, 2, 3, 4, 1] | [0, 2, 3, 1] => vec!["rra", "sa"],
+            [0, 2, 4, 1, 3] => vec!["sa", "ra", "sa", "rra", "rra", "sa"],
+            [0, 2, 4, 3, 1] => vec!["rra", "sa", "rra", "rra", "sa"],
+            [0, 3, 1, 2, 4] => vec!["ra", "sa", "ra", "sa"],
+            [0, 3, 1, 4, 2] => vec!["sa", "rra", "rra", "sa", "ra", "sa"],
+            [0, 3, 2, 1, 4] => vec!["sa", "ra", "ra", "sa", "ra", "ra", "sa"],
+            [0, 3, 2, 4, 1] => vec!["ra", "sa", "rra", "rra", "sa"],
+            [0, 3, 4, 1, 2] => vec!["sa", "ra", "sa"],
+            [0, 3, 4, 2, 1] => vec!["rra", "sa", "rra", "sa", "ra", "sa"],
+            [0, 4, 1, 2, 3] | [0, 3, 1, 2] | [0, 2, 1] => vec!["sa"],
+            [0, 4, 1, 3, 2] | [0, 3, 2, 1] => vec!["sa", "rra", "rra", "sa"],
+            [0, 4, 2, 1, 3] => vec!["rra", "sa", "rra", "sa", "rra", "sa", "ra", "sa"],
+            [0, 4, 2, 3, 1] => vec!["sa", "rra", "rra", "sa", "rra", "sa"],
+            [0, 4, 3, 1, 2] => vec!["sa", "ra", "sa", "rra", "sa"],
+            [0, 4, 3, 2, 1] => vec!["sa", "ra", "ra", "sa", "ra", "sa", "rra", "sa"],
             _ => vec![],
         };
         for op in &ops {
