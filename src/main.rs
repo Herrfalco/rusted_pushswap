@@ -128,7 +128,6 @@ impl Solver {
                 *val = (*val + delta) % len;
             }
         }
-        eprintln!("{:?}", result);
         result
     }
 
